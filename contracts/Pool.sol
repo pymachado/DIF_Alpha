@@ -4,12 +4,14 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./INFT_Factory.sol";
 
 
-contract Pool is AccessControl {
+contract Pool is AccessControl, IERC721Receiver {
   using Counters for Counters.Counter;
+  using Address for address;
   bytes32 public constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
 
   uint256 public minInvesting;
@@ -35,6 +37,7 @@ contract Pool is AccessControl {
   event Deposit(address indexed investor, uint256 indexed amount);
   event Withdraw(address indexed investor, uint256 indexed amount);
   event Funding(uint256 indexed tokenId, address indexed ownerOfNFT, uint256 amountFounding);
+  event ChangedMarketPlace(address indexed newMp, uint256 indexed time);
 
   constructor(
     address addressCurrency,
@@ -56,6 +59,10 @@ contract Pool is AccessControl {
         || interfaceId == type(IERC20).interfaceId 
         || interfaceId == type(IERC721Receiver).interfaceId || super.supportsInterface(interfaceId); 
   }
+
+  function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
+  }
   
   function investingOf(address _investor) public view returns(uint256 balance){
     balance = investors[_investor].amountFounding;
@@ -70,7 +77,7 @@ contract Pool is AccessControl {
   }
 
   function showRemainingTimeToWithdraw(address investor) public view returns(uint256) {
-    return (investors[investor].dayDeposit - block.timestamp);
+    return (block.timestamp - investors[investor].dayDeposit) / 1 minutes;
   } 
 
   function _interest(uint256 newInterest) public onlyRole(DEFAULT_ADMIN_ROLE) returns(bool) {
@@ -93,6 +100,14 @@ contract Pool is AccessControl {
     return true;
   }
 
+  function _changedMarketPlace(address mp) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+    require(mp.isContract(), "Pool: The address inserted is not a contract address");
+    require(IERC165(mp).supportsInterface(this._changedMarketPlace.selector), "Pool: The contract is not compatible");
+    nft.setApprovalForAll(mp, true);
+    emit ChangedMarketPlace(mp, block.timestamp);
+    return true;
+  }
+
   function deposit(uint256 _amount) external returns(bool) {
     if ( exist[_msgSender()] == false) {_numberOfInvestors.increment();}
     uint256 valueINV = pendingReturns[_msgSender()] += _amount;
@@ -109,7 +124,7 @@ contract Pool is AccessControl {
   function withdraw(uint256 _valueWithdrawal) external returns(bool) {
     require(exist[_msgSender()], "POOL: Your are not an investor registered.");
     require(_valueWithdrawal <= investors[_msgSender()].benefits, "POOL: Value of the withdrawal exceeds your funds");
-    uint256 daysPassed = (block.timestamp - investors[_msgSender()].dayDeposit) / 1 minutes;
+    uint256 daysPassed = showRemainingTimeToWithdraw(_msgSender());
     require(daysPassed >=  stakingDays + 1 minutes, "POOL: You have to wait after the withdraw day.");
     currency.transfer(_msgSender(), _valueWithdrawal);
     investors[_msgSender()].benefits -= _valueWithdrawal;

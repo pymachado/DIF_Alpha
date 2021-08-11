@@ -320,15 +320,15 @@
   "sourceMap": "",
   "deployedSourceMap": "",
   "source": "// SPDX-License-Identifier: MIT\npragma solidity >=0.8.0 <0.9.0;\nimport \"@openzeppelin/contracts/token/ERC721/IERC721.sol\";\n\ninterface INFT_Factory is IERC721 {\n  function values(uint256 tokenId) external returns(uint256, uint256);\n}\n",
-  "sourcePath": "D:\\Trabajo\\0-Reservafs\\Proyectos\\DIF PROJECT\\Code\\DIF Alpha\\contracts\\INFT_Factory.sol",
+  "sourcePath": "D:/Trabajo/0-Reservafs/Proyectos/DIF PROJECT/Code/DIF Alpha/contracts/INFT_Factory.sol",
   "ast": {
     "absolutePath": "/D/Trabajo/0-Reservafs/Proyectos/DIF PROJECT/Code/DIF Alpha/contracts/INFT_Factory.sol",
     "exportedSymbols": {
       "IERC165": [
-        2446
+        851
       ],
       "IERC721": [
-        1643
+        818
       ],
       "INFT_Factory": [
         14
@@ -358,7 +358,7 @@
         "id": 2,
         "nodeType": "ImportDirective",
         "scope": 15,
-        "sourceUnit": 1644,
+        "sourceUnit": 819,
         "src": "64:58:0",
         "symbolAliases": [],
         "unitAlias": ""
@@ -371,7 +371,7 @@
               "id": 3,
               "name": "IERC721",
               "nodeType": "IdentifierPath",
-              "referencedDeclaration": 1643,
+              "referencedDeclaration": 818,
               "src": "150:7:0"
             },
             "id": 4,
@@ -380,16 +380,16 @@
           }
         ],
         "contractDependencies": [
-          1643,
-          2446
+          818,
+          851
         ],
         "contractKind": "interface",
         "fullyImplemented": false,
         "id": 14,
         "linearizedBaseContracts": [
           14,
-          1643,
-          2446
+          818,
+          851
         ],
         "name": "INFT_Factory",
         "nodeType": "ContractDefinition",
@@ -511,10 +511,10 @@
     "absolutePath": "/D/Trabajo/0-Reservafs/Proyectos/DIF PROJECT/Code/DIF Alpha/contracts/INFT_Factory.sol",
     "exportedSymbols": {
       "IERC165": [
-        2446
+        851
       ],
       "IERC721": [
-        1643
+        818
       ],
       "INFT_Factory": [
         14
@@ -544,7 +544,7 @@
         "id": 2,
         "nodeType": "ImportDirective",
         "scope": 15,
-        "sourceUnit": 1644,
+        "sourceUnit": 819,
         "src": "64:58:0",
         "symbolAliases": [],
         "unitAlias": ""
@@ -557,7 +557,7 @@
               "id": 3,
               "name": "IERC721",
               "nodeType": "IdentifierPath",
-              "referencedDeclaration": 1643,
+              "referencedDeclaration": 818,
               "src": "150:7:0"
             },
             "id": 4,
@@ -566,16 +566,16 @@
           }
         ],
         "contractDependencies": [
-          1643,
-          2446
+          818,
+          851
         ],
         "contractKind": "interface",
         "fullyImplemented": false,
         "id": 14,
         "linearizedBaseContracts": [
           14,
-          1643,
-          2446
+          818,
+          851
         ],
         "name": "INFT_Factory",
         "nodeType": "ContractDefinition",
@@ -699,7 +699,7 @@
   },
   "networks": {},
   "schemaVersion": "3.3.4",
-  "updatedAt": "2021-08-07T02:26:31.485Z",
+  "updatedAt": "2021-08-09T22:12:23.853Z",
   "devdoc": {
     "kind": "dev",
     "methods": {
