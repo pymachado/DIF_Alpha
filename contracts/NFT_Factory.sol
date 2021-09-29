@@ -22,6 +22,7 @@ contract NFT_Factory is ERC721URIStorage, AccessControl {
 
     DATA_INVOICE[] private _dataInvoices;
     
+    mapping (bytes32 => uint256) private _hashTokenId;
     mapping(bytes32 => bool) private _hashExist;
    
     constructor() ERC721("Decentralized Invoice Factoring", "DIF") {
@@ -83,7 +84,6 @@ contract NFT_Factory is ERC721URIStorage, AccessControl {
                                                                    _priceOfSell,
                                                                    _valueOfNFT)
                                                                    );
-                          
                           require(! _hashExist[invoiceHash], "NFT_Factory: This hash exist already");
                           _hashExist[invoiceHash] = true;
                           uint256 newItemId = _assemble( _name,
@@ -97,6 +97,7 @@ contract NFT_Factory is ERC721URIStorage, AccessControl {
                                                          _priceOfSell,
                                                          _valueOfNFT,
                                                          invoiceHash);
+                          _hashTokenId[invoiceHash] = newItemId;
                           _mint(_recipient, newItemId);
                           totalOfNFTMinted += 1;                                               
                        }
@@ -127,6 +128,10 @@ contract NFT_Factory is ERC721URIStorage, AccessControl {
   function values(uint256 tokenId) public view returns(uint256 priceOfSell, uint256 valueOfNFT) {
     priceOfSell = _dataInvoices[tokenId].priceOfSell;
     valueOfNFT = _dataInvoices[tokenId].valueOfNFT;
+  }
+
+  function getTokenid (bytes32 hashToken) public view returns(uint256 tokenId) {
+    tokenId = _hashTokenId[hashToken];
   }
 
 }

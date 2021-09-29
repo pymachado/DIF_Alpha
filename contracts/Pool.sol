@@ -29,7 +29,6 @@ contract Pool is AccessControl, IERC721Receiver {
     uint256 lastDayDeposit;
   }
 
-  mapping (address => uint) private _pendingReturns;
   mapping (address => Investor) private _investors;
   mapping (address => bool) private _isExist;
 
