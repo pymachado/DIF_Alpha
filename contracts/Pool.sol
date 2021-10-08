@@ -12,7 +12,7 @@ import "./INFT_Factory.sol";
 contract Pool is AccessControl, IERC721Receiver {
   using Counters for Counters.Counter;
   using Address for address;
-  bytes32 public constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
+  bytes32 private constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
   uint256 public constant interest = 10;
   uint256 public minInvesting;
   uint256 public stakingDays;
@@ -33,9 +33,8 @@ contract Pool is AccessControl, IERC721Receiver {
   mapping (address => bool) private _isExist;
 
   event Deposit(address indexed investor, uint256 indexed amount);
-  event Withdraw(address indexed investor, uint256 indexed amount);
   event Funding(uint256 indexed tokenId, address indexed ownerOfNFT, uint256 amountFounding);
-  event ChangedMarketPlace(address indexed newMp, uint256 indexed time);
+  event ChangedDebtLiquidator(address indexed newMp, uint256 indexed time);
 
   constructor(
     address addressCurrency,
@@ -98,11 +97,11 @@ contract Pool is AccessControl, IERC721Receiver {
     return true;
   }
 
-  function _changedMarketPlace(address mp) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
-    require(mp.isContract(), "Pool: The address inserted is not a contract address");
-    require(IERC165(mp).supportsInterface(this._changedMarketPlace.selector), "Pool: The contract is not compatible");
-    nft.setApprovalForAll(mp, true);
-    emit ChangedMarketPlace(mp, block.timestamp);
+  function _swapDebtLiquidator(address dl) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bool) {
+    require(dl.isContract(), "Pool: The address inserted is not a contract address");
+    require(IERC165(dl).supportsInterface(this._swapDebtLiquidator.selector), "Pool: The contract is not compatible");
+    nft.setApprovalForAll(dl, true);
+    emit ChangedDebtLiquidator(dl, block.timestamp);
     return true;
   }
 
@@ -130,7 +129,7 @@ contract Pool is AccessControl, IERC721Receiver {
     currency.transfer(_msgSender(), _valueWithdrawal);
     _investors[_msgSender()].pendingToWithdraw -= _valueWithdrawal;
     _investors[_msgSender()].totalWithdrawed += _valueWithdrawal;
-    emit Withdraw(_msgSender(), _valueWithdrawal);
+    emit Deposit(_msgSender(), _valueWithdrawal);
     return true;
   }  
 

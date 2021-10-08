@@ -1,38 +1,52 @@
 import json
 from web3 import Web3
+from web3.logs import DISCARD
+
 
 class BLOCKCHAIN_SELECTOR:
     
     def __init__(self): 
         self.providers = {
             'develop': "http://127.0.0.1:9545/",
-            'ganache': "http://127.0.0.1:7545",
+            'ganache': "http://127.0.0.1:7545/",
             'mumbai': "https://polygon-mumbai.infura.io/v3/de736e9690cc464cbd7000a8ec2f6fe2",
             'matic': "https://polygon-mainnet.infura.io/v3/de736e9690cc464cbd7000a8ec2f6fe2"
         }
 
         self.networkScan = {
-            'mainnet': "https://polygonscan.com/tx/",
-            'mumbai': "https://mumbai.polygonscan.com/tx/" 
+            'mainnet': "https://polygonscan.com/",
+            'mumbai': "https://mumbai.polygonscan.com/" 
         }
 
         self.data = {
             'number_confirmations': "",
             'link_polygonscan': "",
-            'tx_receipt': "" 
+            'tx_receipt': "",
+            'tx_argsEvent': "" 
         }
     
     def _plotHash(self, tx_hash, baseLink):
         if (tx_hash !=0):
-            return baseLink+tx_hash
-    
-    def _loading(self, val_receipt):
-        while (val_receipt == ''):
-            print('Loading .')
-            print('Loading ..')
-            print('Loading ...')
-        return 'Success'
+            return baseLink + 'tx/' + tx_hash
 
+class CORECOMPONENTS(BLOCKCHAIN_SELECTOR):
+    
+    def __init__(self, addressNFTFactoryMainnet, 
+                       addressNFTFactoryMumbai,
+                       addressPoolMainnet, 
+                       addressPoolMumbai, 
+                       addressDebtLiquidatorMainnet,
+                       addressDebtLiquidatorMumbai, 
+                       addressProxyMainnet,
+                       addressProxyMumbai):
+        self.addressNFTFactoryMainnet = super().networkScan['mainnet'] + 'address/' + addressNFTFactoryMainnet
+        self.addressNFTFactoryMumbai = super().networkScan['mumbai'] + 'address/' + addressNFTFactoryMumbai
+        self.addressPoolMainnet = super().networkScan['mainnet'] + 'address/' + addressPoolMainnet
+        self.addressPoolMumbai = super().networkScan['mumbai'] + 'address/' + addressPoolMumbai
+        self.addressDebtLiquidatorMainnet = super().networkScan['mainnet'] + 'address/' + addressDebtLiquidatorMainnet
+        self.addressDebtLiquidatorMumbai = super().networkScan['mumbai'] + 'address/' + addressDebtLiquidatorMumbai
+        self.addressProxyMainnet = super().networkScan['mainnet'] + 'address/' + addressProxyMainnet
+        self.addressProxyMumbai = super().networkScan['mumbai'] + 'address/' + addressProxyMumbai
 
 
 class NFT_FACTORY(BLOCKCHAIN_SELECTOR):
@@ -64,21 +78,44 @@ class NFT_FACTORY(BLOCKCHAIN_SELECTOR):
     def get_TokenId(self, hashToken):
         return self.nftContract.functions.getTokenid(hashToken).call()
 
+    def get_totalNFTBurned(self):
+        totalBurned = self.nftContract.balanceOf('0x0000000000000000000000000000000000000001').call()
+        return totalBurned;
+
     #add validation for data
     def set_CreateInvoice(self, addressAdmin, recipient, name, addressGeoOne, addressGeoTwo, city, state, country, zip, phone, priceOfSell, valueOfNFT):
         gasLimit = self.nftContract.functions.createInvoice(recipient, name, addressGeoOne, addressGeoTwo, city, state, country, zip, phone, priceOfSell, valueOfNFT).estimateGas()
         tx_hash = self.nftContract.functions.createInvoice(recipient, name, addressGeoOne, addressGeoTwo, city, state, country, zip, phone, priceOfSell, valueOfNFT).transact({'from': addressAdmin, 'gas': gasLimit})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
         return super().data
-                
 
+    def set_ApprovalForAll(self, fromAddress, operatorAddress):
+        gasLimit = self.nftContract.functions.setApproveForAll(operatorAddress, 'true').estimateGas()
+        tx_hash = self.nftContract.functions.setApproveForAll(operatorAddress, 'true').transact({'from': fromAddress, 'gas': gasLimit})
+        currentBlock = self.w3.eth.get_block_number
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
+        confirmations = abs(minedBlock - currentBlock)
+        super().data['number_confirmations'] = confirmations
+        super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
+        super().data['tx_receipt'] = tx_receipt
+        return super().data
+
+
+    def listenEventMint(self):
+        mint_filter = self.nftContract.events.Transfer.createFilter(fromBlock='latest', argument_filters={'from':'0x0000000000000000000000000000000000000000'})
+        return mint_filter.get_new_entries()
+    
+
+    def listenEventApproveForAll(self):
+        mint_filter = self.nftContract.events.ApprovalForAll.createFilter(fromBlock='latest')
+        return mint_filter.get_new_entries()
 
 class DEBT_LIQUIDATOR(BLOCKCHAIN_SELECTOR): 
     def __init__(self, _smartContract_path, _addressSmartContract, _setProvider, _setNetwork):
@@ -104,14 +141,17 @@ class DEBT_LIQUIDATOR(BLOCKCHAIN_SELECTOR):
         gasLimit = self.debtLiquidatorContract.functions.pay(tokenId, value).estimateGas()
         tx_hash = self.debtLiquidatorContract.functions.pay(tokenId, value).transact({'from': fromAddress, 'gas': gasLimit})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
         return super().data
+
+    def listenEventDebtLiquidated(self):
+        debt_liquidated = self.debtLiquidatorContract.events.LiquidatedDebt.createFilter(fromBlock= 'latest')
+        return debt_liquidated.get_new_entries()
 
 class POOL(BLOCKCHAIN_SELECTOR):
     def __init__(self, _smartContract_path, _addressSmartContract, _setProvider, _setNetwork):
@@ -156,13 +196,12 @@ class POOL(BLOCKCHAIN_SELECTOR):
         gasLimit = self.poolContract.functions._stakingDays(newStakingDays).estimateGas()
         tx_hash = self.poolContract.functions._stakingDays(newStakingDays).transact({'from': addressAdmin, 'gas': gasLimit})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
         return super().data
 
 
@@ -170,13 +209,12 @@ class POOL(BLOCKCHAIN_SELECTOR):
         gasLimiti = self.poolContract.functions._minInvesting(newMinInvesting).estimateGas()
         tx_hash = self.poolContract.functions._minInvesting(newMinInvesting).transact({'from': addressAdmin, 'gas': gasLimiti})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
         return super().data
 
 
@@ -184,13 +222,12 @@ class POOL(BLOCKCHAIN_SELECTOR):
         gasLimit = self.poolContract.functions._marginInvestment(newMarginInvestmment).estimateGas()
         tx_hash = self.poolContract.functions._marginInvestment(newMarginInvestmment).transact({'from': addressAdmin, 'gas': gasLimit})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
         return super().data
 
 
@@ -198,13 +235,14 @@ class POOL(BLOCKCHAIN_SELECTOR):
         gasLimit = self.poolContract.functions._swapDebtLiquidator(addressDL).estimateGas()
         tx_hash = self.poolContract.functions._swapDebtLiquidator(addressDL).transact({'from': addressAdmin, 'gas': gasLimit})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
+        tx_event = self.poolContract.events.ChangedDebtLiquidator().processReceipt(tx_receipt, errors=DISCARD)
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
+        super().data['tx_argsEvent'] = tx_event[0]['args']
         return super().data
 
     
@@ -212,13 +250,14 @@ class POOL(BLOCKCHAIN_SELECTOR):
         gasLimit = self.poolContract.functions.deposit(amount).estimateGas()
         tx_hash = self.poolContract.functions.deposit(amount).transact({'from': fromAddress, 'gas': gasLimit})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
+        tx_event = self.poolContract.events.Deposit().processReceipt(tx_receipt, errors=DISCARD)
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
+        super().data['tx_argsEvent'] = tx_event[0]['args']
         return super().data
 
 
@@ -226,13 +265,14 @@ class POOL(BLOCKCHAIN_SELECTOR):
         gasLimit = self.poolContract.functions.withdraw(valueWithdrawal).estimateGas()
         tx_hash = self.poolContract.functions.withdraw(valueWithdrawal).transact({'from': fromAddress, 'gas': gasLimit})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
+        tx_event = self.poolContract.events.Deposit().processReceipt(tx_receipt, errors=DISCARD)
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
+        super().data['tx_argsEvents'] = tx_event[0]['args']
         return super().data
 
 
@@ -240,13 +280,14 @@ class POOL(BLOCKCHAIN_SELECTOR):
         gasLimit = self.poolContract.functions.funding(tokenId, amount).estimateGas()
         tx_hash = self.poolContract.functions.funding(tokenId, amount).transact({'from': funderAddress, 'gas': gasLimit})
         currentBlock = self.w3.eth.get_block_number
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        super()._loading(receipt)
-        minedBlock = receipt['blockNumber']
+        tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        minedBlock = tx_receipt['blockNumber']
+        tx_event = self.poolContract.events.Funding().processReceipt(tx_receipt, errors=DISCARD)
         confirmations = abs(minedBlock - currentBlock)
         super().data['number_confirmations'] = confirmations
         super().data['link_polygonscan'] = super()._plotHash(tx_hash, self.networkScan)
-        super().data['tx_receipt'] = receipt
+        super().data['tx_receipt'] = tx_receipt
+        super().data['tx_argsEvent'] = tx_event[0]['args']
         return super().data
 
 
